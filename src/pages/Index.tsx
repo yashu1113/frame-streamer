@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 const Index = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const socketRef = useRef<any>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
 
   useEffect(() => {
     // Connect to WebSocket server
@@ -44,12 +45,14 @@ const Index = () => {
   }, []);
 
   const startStreaming = () => {
-    socketRef.current?.emit("start-stream");
+    socketRef.current?.emit("start-stream", { videoPath: "/sample.mp4" });
+    setIsStreaming(true);
     toast.info("Starting video stream...");
   };
 
   const stopStreaming = () => {
     socketRef.current?.emit("stop-stream");
+    setIsStreaming(false);
     toast.info("Stopping video stream...");
   };
 
@@ -59,23 +62,38 @@ const Index = () => {
         <h1 className="text-3xl font-bold text-center">Video Frame Streamer</h1>
         
         <Card className="p-6">
-          <canvas
-            ref={canvasRef}
-            width={640}
-            height={480}
-            className="w-full bg-black rounded-lg"
-          />
+          <div className="aspect-video relative">
+            <canvas
+              ref={canvasRef}
+              width={640}
+              height={480}
+              className="w-full h-full bg-black rounded-lg"
+            />
+            {!isStreaming && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                <p className="text-white text-lg">Click Start Streaming to view sample video</p>
+              </div>
+            )}
+          </div>
           
           <div className="flex justify-center gap-4 mt-6">
-            <Button onClick={startStreaming}>Start Streaming</Button>
-            <Button 
-              onClick={stopStreaming}
-              variant="outline"
-            >
-              Stop Streaming
-            </Button>
+            {!isStreaming ? (
+              <Button onClick={startStreaming}>Start Streaming</Button>
+            ) : (
+              <Button 
+                onClick={stopStreaming}
+                variant="outline"
+              >
+                Stop Streaming
+              </Button>
+            )}
           </div>
         </Card>
+
+        <div className="text-center text-sm text-gray-500">
+          <p>Note: Make sure your Node.js server is running on localhost:3000</p>
+          <p>Sample video will be streamed when you click Start Streaming</p>
+        </div>
       </div>
     </div>
   );
