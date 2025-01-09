@@ -3,14 +3,16 @@ import io from "socket.io-client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Slider } from "@/components/ui/slider";
 
 const Index = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const socketRef = useRef<any>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [fps, setFps] = useState([30]); // Default 30 FPS
 
   useEffect(() => {
-    // Connect to WebSocket server
+    // Connect to WebSocket server only when component mounts
     socketRef.current = io("ws://localhost:3000");
 
     // Handle incoming frame data
@@ -35,6 +37,7 @@ const Index = () => {
 
     socketRef.current.on("connect_error", () => {
       toast.error("Failed to connect to streaming server");
+      setIsStreaming(false);
     });
 
     return () => {
@@ -44,8 +47,18 @@ const Index = () => {
     };
   }, []);
 
+  // Update FPS on server when slider changes
+  useEffect(() => {
+    if (isStreaming) {
+      socketRef.current?.emit("update-fps", { fps: fps[0] });
+    }
+  }, [fps, isStreaming]);
+
   const startStreaming = () => {
-    socketRef.current?.emit("start-stream", { videoPath: "/sample.mp4" });
+    socketRef.current?.emit("start-stream", { 
+      videoPath: "/sample.mp4",
+      fps: fps[0]
+    });
     setIsStreaming(true);
     toast.info("Starting video stream...");
   };
@@ -76,17 +89,32 @@ const Index = () => {
             )}
           </div>
           
-          <div className="flex justify-center gap-4 mt-6">
-            {!isStreaming ? (
-              <Button onClick={startStreaming}>Start Streaming</Button>
-            ) : (
-              <Button 
-                onClick={stopStreaming}
-                variant="outline"
-              >
-                Stop Streaming
-              </Button>
-            )}
+          <div className="mt-6 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">FPS Control</label>
+              <Slider
+                value={fps}
+                onValueChange={setFps}
+                min={1}
+                max={60}
+                step={1}
+                disabled={isStreaming}
+              />
+              <p className="text-sm text-gray-500 text-center">{fps[0]} FPS</p>
+            </div>
+
+            <div className="flex justify-center gap-4">
+              {!isStreaming ? (
+                <Button onClick={startStreaming}>Start Streaming</Button>
+              ) : (
+                <Button 
+                  onClick={stopStreaming}
+                  variant="outline"
+                >
+                  Stop Streaming
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
 
